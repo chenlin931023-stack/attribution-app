@@ -38,11 +38,6 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Python sidecar
-        shell: bash
-        run: |
-          chmod +x build-sidecar.sh
-          ./build-sidecar.sh
 
       - name: Build Tauri app
         run: npm run tauri build

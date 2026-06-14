@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Download, AlertTriangle, TrendingUp, Wallet, Percent, BarChart3 } from "lucide-react";
+import { Loader2, Download, AlertTriangle, TrendingUp, Wallet, Percent, BarChart3, ChevronDown, ChevronRight } from "lucide-react";
 import { getResults, type AttributionResult } from "@/lib/api";
 import { fmtPctShort, fmtWan } from "@/lib/chart-theme";
 import OverviewCards from "@/components/cards/OverviewCards";
@@ -8,6 +8,26 @@ import AssetBarChart from "@/components/charts/AssetBarChart";
 import ReturnSourceChart from "@/components/charts/ReturnSourceChart";
 import WaterfallChart from "@/components/charts/WaterfallChart";
 import AssetDetailTable from "@/components/tables/AssetDetailTable";
+
+function CollapsibleSection({ title, defaultOpen = true, children }: {
+  title: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 px-4 py-3 border-b border-slate-100 hover:bg-slate-50 transition-colors"
+      >
+        {open ? <ChevronDown className="w-4 h-4 text-slate-400" /> : <ChevronRight className="w-4 h-4 text-slate-400" />}
+        <h3 className="text-sm font-semibold text-slate-700">{title}</h3>
+      </button>
+      {open && children}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const { taskId } = useParams<{ taskId: string }>();
@@ -107,7 +127,7 @@ export default function Dashboard() {
       />
 
       {/* Chart Tabs */}
-      <div className="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
+      <CollapsibleSection title="图表分析">
         <div className="flex border-b border-slate-100">
           {[
             { key: "bar", label: "资产收益贡献" },
@@ -136,48 +156,12 @@ export default function Dashboard() {
             <WaterfallChart assets={assets} fees={fees} navAvgWan={navAvgWan} days={meta.days} retAnnAvg={retAnnAvg} />
           )}
         </div>
-      </div>
+      </CollapsibleSection>
 
-      {/* Asset Detail Table */}
-      <div className="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100">
-          <h3 className="text-sm font-semibold text-slate-700">资产归因明细</h3>
-        </div>
+      {/* Asset & Fee Detail Table */}
+      <CollapsibleSection title="资产及费用归因明细">
         <AssetDetailTable assets={assets} fees={fees} navAvgWan={navAvgWan} />
-      </div>
-
-      {/* Fee Section */}
-      {fees.length > 0 && (
-        <div className="bg-white rounded-xl border border-slate-200 card-shadow overflow-hidden">
-          <div className="px-4 py-3 border-b border-slate-100">
-            <h3 className="text-sm font-semibold text-slate-700">费用归因</h3>
-          </div>
-          <div className="p-4">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="text-slate-400 border-b border-slate-100">
-                  <th className="text-left py-2 font-medium">费用类别</th>
-                  <th className="text-right py-2 font-medium">本期计提(万)</th>
-                  <th className="text-right py-2 font-medium">年化拖累(日均口径)</th>
-                </tr>
-              </thead>
-              <tbody>
-                {fees.map((f, i) => (
-                  <tr key={i} className="border-b border-slate-50">
-                    <td className="py-2 text-slate-700">{f["费用类别"]}</td>
-                    <td className="py-2 text-right text-red-500 font-medium">
-                      {f["本期费用(万)"].toFixed(2)}
-                    </td>
-                    <td className="py-2 text-right text-red-500 font-medium">
-                      {f["费用年化拖累_日均(%)"]?.toFixed(4) ?? "-"}%
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      </CollapsibleSection>
     </div>
   );
 }

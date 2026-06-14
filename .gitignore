@@ -6,6 +6,25 @@
 # Node 依赖
 node_modules/
 
+# Python 缓存和构建产物
+__pycache__/
+*.pyc
+*.pyo
+backend/dist/
+backend/build/
+backend/python-deps/
+backend/*.spec
+
+# Vite 构建产物
+dist/
+
+# Sidecar 二进制文件
+src-tauri/sidecar/
+
 # 其他临时文件
 .DS_Store
 *.log
+
+# 大文件
+*.pptx
+*.exe

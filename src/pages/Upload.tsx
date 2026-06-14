@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { UploadCloud, FileSpreadsheet, Check, AlertCircle, Loader2, Calendar, ChevronDown, Play } from "lucide-react";
 import { uploadFile, submitAnalysis, type FileInfo } from "@/lib/api";
@@ -14,9 +14,26 @@ export default function Upload() {
   const [endDate, setEndDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [productSearch, setProductSearch] = useState("");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const allProducts = [...new Set(files.flatMap((f) => f.product_codes))].sort();
+
+  const filteredProducts = allProducts.filter((code) =>
+    code.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleFiles = useCallback(
     async (fileList: File[] | FileList) => {
@@ -63,12 +80,27 @@ export default function Upload() {
       if (valFiles.length < 2) throw new Error("需要至少两个估值表文件（期初+期末）");
 
       const { task_id } = await submitAnalysis({
+        product_code: selectedProduct,
+        start_date: startDate,
+        end_date: endDate,
+        valuation_begin_file_id: valFiles[0].file_id,
+        valuation_end_file_id: valFiles[1].file_id,
+        cashflow_file_id: cfFile?.file_id || "",
+      });
+
+      // Save task to localStorage for task history page
+      const stored = localStorage.getItem("attribution_tasks");
+      const taskList = stored ? JSON.parse(stored) : [];
+      taskList.unshift({
+        task_id,
+        status: "done",
         product_codes: [selectedProduct],
         start_date: startDate,
         end_date: endDate,
-        valuation_file_ids: valFiles.map((f) => f.file_id),
-        cashflow_file_id: cfFile?.file_id || "",
+        created_at: new Date().toISOString().slice(0, 10),
       });
+      localStorage.setItem("attribution_tasks", JSON.stringify(taskList));
+
       navigate(`/dashboard/${task_id}`);
     } catch (e: any) {
       setError(e.message);
@@ -163,23 +195,60 @@ export default function Upload() {
           <h3 className="text-sm font-semibold text-slate-700">分析配置</h3>
 
           {/* Product Selector */}
-          <div>
+          <div ref={dropdownRef} className="relative">
             <label className="text-xs font-medium text-slate-500 mb-1.5 block">产品代码</label>
-            <div className="flex flex-wrap gap-2">
-              {allProducts.map((code) => (
-                <button
-                  key={code}
-                  onClick={() => setSelectedProduct(code)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                    selectedProduct === code
-                      ? "bg-brand-600 text-white border-brand-600"
-                      : "bg-white text-slate-600 border-slate-200 hover:border-brand-300"
-                  }`}
-                >
-                  {code}
-                </button>
-              ))}
+            <div
+              className="flex items-center gap-2 w-full pl-3 pr-3 py-2 rounded-lg border border-slate-200 text-sm
+                         focus-within:ring-2 focus-within:ring-brand-200 focus-within:border-brand-400 cursor-text"
+              onClick={() => setDropdownOpen(true)}
+            >
+              <input
+                type="text"
+                placeholder={selectedProduct || "输入或选择产品代码..."}
+                value={productSearch}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  setDropdownOpen(true);
+                }}
+                onFocus={() => setDropdownOpen(true)}
+                className="flex-1 outline-none bg-transparent text-sm text-slate-700 placeholder:text-slate-400"
+              />
+              <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
             </div>
+            {dropdownOpen && filteredProducts.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto bg-white rounded-lg border border-slate-200 shadow-lg">
+                {filteredProducts.map((code) => (
+                  <div
+                    key={code}
+                    onClick={() => {
+                      setSelectedProduct(code);
+                      setProductSearch("");
+                      setDropdownOpen(false);
+                    }}
+                    className={`px-3 py-2 text-sm cursor-pointer hover:bg-brand-50 transition-colors ${
+                      selectedProduct === code
+                        ? "bg-brand-50 text-brand-700 font-medium"
+                        : "text-slate-700"
+                    }`}
+                  >
+                    {code}
+                  </div>
+                ))}
+              </div>
+            )}
+            {selectedProduct && (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="text-xs px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 font-medium">
+                  {selectedProduct}
+                </span>
+                <button
+                  onClick={() => setSelectedProduct("")}
+                  className="text-xs text-slate-400 hover:text-red-500"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Date Range */}

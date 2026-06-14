@@ -20,6 +20,7 @@ export const INVEST_CATEGORIES = [
 
 export function bigCategory(cat: string): string {
   if (cat === "托管账户") return "货币存款";
+  if (cat === "公司债券") return "公司债券";
   if (cat.includes("公募基金")) return cat;
   if (cat.includes("债券")) return "债券类资管";
   if (cat.includes("混合")) return "混合类资管";

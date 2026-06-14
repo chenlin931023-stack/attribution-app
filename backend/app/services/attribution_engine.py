@@ -490,8 +490,8 @@ def run_attribution(
         'prod': product_code,
         'prod_name': prod_name,
         'product_nav': {**product_nav,
-                        f'nav_avg_{DAYS}_wan': round(nav_avg_159/1e4, 2),
-                        'ret_ann_vs_avg': fmt_pct(ret_ann_avg)},
+                        'nav_avg_wan': round(nav_avg_159/1e4, 2),
+                        'ret_ann_vs_avg': ret_ann_avg},
         'assets': res_df.to_dict(orient='records') if len(res_df) > 0 else [],
         'fees':   fee_df.to_dict(orient='records') if len(fee_df) > 0 else [],
         'reconcile': {

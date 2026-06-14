@@ -105,10 +105,11 @@ export async function uploadFile(file: File): Promise<FileInfo> {
 }
 
 export async function submitAnalysis(data: {
-  product_codes: string[];
+  product_code: string;
   start_date: string;
   end_date: string;
-  valuation_file_ids: string[];
+  valuation_begin_file_id: string;
+  valuation_end_file_id: string;
   cashflow_file_id: string;
 }): Promise<{ task_id: string }> {
   return request("/analyze", {

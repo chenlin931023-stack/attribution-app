@@ -41,7 +41,7 @@ def export_excel(task_id: str):
     nav_end  = pnav['nav_end']
     ret_abs  = pnav['ret_abs']
     ret_ann  = pnav.get('ret_ann_vs_avg', 0) or 0
-    nav_avg_wan = pnav.get(f'nav_avg_{DAYS}_wan', 0) or 0
+    nav_avg_wan = pnav.get('nav_avg_wan', 0) or 0
 
     THIN   = Side(style='thin', color='BFBFBF')
     MEDIUM = Side(style='medium', color='595959')

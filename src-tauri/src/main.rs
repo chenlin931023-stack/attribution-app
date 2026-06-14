@@ -49,11 +49,16 @@ fn start_python_sidecar() -> Option<Child> {
         "attribution-engine"
     };
 
-    // Resolve sidecar path relative to the app bundle
-    let sidecar_path = std::env::current_exe()
+    // Resolve sidecar path: in dev it's in sidecar/ subdir, in bundle it's next to the exe
+    let exe_dir = std::env::current_exe()
         .ok()
-        .and_then(|p| p.parent().map(|d| d.join("sidecar").join(binary_name)))
-        .unwrap_or_else(|| std::path::PathBuf::from(binary_name));
+        .and_then(|p| p.parent().map(|d| d.to_path_buf()))
+        .unwrap_or_else(|| std::path::PathBuf::from("."));
+    let sidecar_path = if exe_dir.join("sidecar").join(binary_name).exists() {
+        exe_dir.join("sidecar").join(binary_name)
+    } else {
+        exe_dir.join(binary_name)
+    };
 
     println!(
         "[Tauri] Starting Python sidecar: {}",
@@ -110,7 +115,7 @@ fn main() {
                             let _ = window.emit("native-file-drop", excel_paths);
                         }
                     }
-                    tauri::DragDropEvent::Hover { paths, .. } => {
+                    tauri::DragDropEvent::Enter { paths, .. } => {
                         let has_excel = paths.iter().any(|p| {
                             let lower = p.to_string_lossy().to_lowercase();
                             lower.ends_with(".xls") || lower.ends_with(".xlsx")
@@ -164,22 +169,23 @@ fn main() {
 
             Ok(())
         })
-        .on_event(|app, event| {
-            use tauri::RunEvent;
-            if let RunEvent::Exit = event {
-                let state = app.state::<SidecarState>();
-                if let Some(mut child) = state.child.lock().unwrap().take() {
-                    println!("[Tauri] Shutting down sidecar (PID: {})...", child.id());
-                    let _ = child.kill();
-                    let _ = child.wait();
-                    println!("[Tauri] Sidecar stopped");
-                }
-            }
-        })
         .invoke_handler(tauri::generate_handler![
             get_sidecar_port,
             get_sidecar_status
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|app, event| {
+            use tauri::RunEvent;
+            if let RunEvent::Exit = event {
+                let state = app.state::<SidecarState>();
+                let child = state.child.lock().unwrap().take();
+                if let Some(mut child) = child {
+                    println!("[Tauri] Shutting down sidecar (PID: {})...", child.id());
+                    let _ = child.kill();
+                    let _ = child.wait();
+                    println!("[Tauri] Sidecar stopped");
+                };
+            }
+        });
 }
